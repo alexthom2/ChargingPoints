@@ -1,0 +1,134 @@
+---
+title: "EDA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{R}
+
+library(tidyverse)
+
+
+
+
+````
+
+
+
+```{r}
+
+
+
+poscodloc <- read_csv("post code by location.csv")
+
+ulv <- read_csv("veh0134.csv")
+
+carpc <- read_csv("carsbypostcode.csv")
+
+poppc <- read_csv("popbypc.csv")
+
+northumpc <- read_csv("pc-property-count.csv")
+
+
+
+
+
+````
+
+
+```{r}
+
+
+ulv_tidy <- ulv %>% pivot_longer(cols = 2:37, names_to = "quater", values_to = "Cars") 
+
+ulv_tidy$Cars <- as.numeric(as.character(ulv_tidy$Cars))
+
+northumpc_tidy <- northumpc %>% separate(POSTCODE,into =  c("pc1", "pc2"), sep = " ") %>%
+                                  group_by(pc1) %>%
+                                    summarise(comerical = sum(POSTAL_COMMERCIAL_PROPERTIES), residential = sum(RESIDENTIAL_PROPERTIES))
+
+colnames(ulv_tidy)[1] <- "pc1"
+
+```
+
+
+```{r}
+
+
+
+
+pc_loc_tiday <- poscodloc %>% separate(postcode, into =  c("pc1", "pc2"), sep = " ") %>%
+                                    group_by(pc1) %>%
+                                      summarise(lat = mean(latitude), lon = mean(longitude))
+
+
+
+
+
+
+```
+
+
+
+```{r}
+
+
+
+data1 <- ulv_tidy %>% left_join(northumpc_tidy, by = "pc1") %>%
+                          left_join(pc_loc_tiday) %>%
+                                filter(!is.na(residential)) %>%
+                              filter(quater == "2020 Q3")
+
+
+
+```
+
+```{r}
+
+library("rnaturalearth")
+library("rnaturalearthdata")
+
+library(rgeos)
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+class(world)
+
+
+
+
+
+
+
+
+```
+```{r}
+
+p <-  ggmap(get_googlemap(center = c(lon = -2.25, lat = 55.4),
+                    zoom = 9, scale = 2,
+                    maptype ='terrain',
+                    color = 'color')) 
+
+
+
+p + geom_point(aes( x = lon, y = lat, size = Cars), data = data1,  alpha = 0.5)
+
+
+
+
+```
+
+
+```{r}
+
+ggplot(data = world) +
+    geom_sf() +
+    geom_point(data = data, aes(x = long, y = lat), size = cars, 
+        shape = 23, alpha = 0.5) +
+    coord_sf(xlim = c(-88, -78), ylim = c(24.5, 33), expand = FALSE)
+
+
+```
