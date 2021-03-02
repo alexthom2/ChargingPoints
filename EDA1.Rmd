@@ -21,7 +21,7 @@ library(tidyverse)
 
 ```{r}
 
-
+setwd("~/Data Science Masters/group project")
 
 poscodloc <- read_csv("post code by location.csv")
 
@@ -34,7 +34,7 @@ poppc <- read_csv("popbypc.csv")
 northumpc <- read_csv("pc-property-count.csv")
 
 
-
+allcarpc <- read_csv("allcars.csv")
 
 
 ````
@@ -122,13 +122,171 @@ p + geom_point(aes( x = lon, y = lat, size = Cars), data = data1,  alpha = 0.5)
 ```
 
 
+
 ```{r}
 
-ggplot(data = world) +
-    geom_sf() +
-    geom_point(data = data, aes(x = long, y = lat), size = cars, 
-        shape = 23, alpha = 0.5) +
-    coord_sf(xlim = c(-88, -78), ylim = c(24.5, 33), expand = FALSE)
+colnames(northumpc)[1] <- "postcode"
+
+allpost <- northumpc %>% left_join(poscodloc, by = "postcode")
+
+colnames(allpost)[6] <- "lat"
+
+colnames(allpost)[7] <- "lon"
+
+
+```
+
+
+```{r}
+
+
+t <-  ggmap(get_googlemap(center = c(lon = -2.25, lat = 55.4),
+                    zoom = 9, scale = 2,
+                    maptype ='terrain',
+                    color = 'color')) 
+
+
+
+plot1 <- t + geom_point(aes( x = lon, y = lat, size = RESIDENTIAL_PROPERTIES), data = allpost,  alpha = 0.1) +
+                                                        labs(title = "Northumberland Residential Properties")
+
+
+
+ggsave("plot1.png", plot1)
+
+```
+
+
+
+```{r}
+
+ulv_tidy_lat <- ulv_tidy %>% filter(quater == "2020 Q3")
+
+
+dat2 <- northumpc_tidy %>% left_join(ulv_tidy_lat, by = "pc1") %>%
+                                mutate(ulvph = Cars/residential)
+
+````
+
+
+```{r}
+
+
+alpost2 <- allpost %>% mutate(post2 = postcode) %>%
+                         separate(post2,into =  c("pc1", "pc2"), sep = " ") %>%
+                   left_join(dat2, by = "pc1") 
+
+
+alpost2_fil <- alpost2 %>% filter(ulvph < 10) 
+
+
+
+```
+
+
+```{r}
+
+
+
+
+
+
+t <-  ggmap(get_googlemap(center = c(lon = -2.25, lat = 55.4),
+                    zoom = 9, scale = 2,
+                    maptype ='terrain',
+                    color = 'color')) 
+
+
+
+t + geom_point(aes( x = lon, y = lat, size = ulvph, col = ulvph), data = alpost2_fil, alpha = 0.2) +
+                                labs(title = "Ultra Low Emmision Vehicles Per House Northumberland") +
+                                guides(colour = guide_legend(title = "ULEV Per House"), size = F) +
+                                    scale_colour_viridis()
+
+
+
+
+ggsave("plot2.png", last_plot())
+
+
+
+```
+
+
+
+
+
+
+````{r}
+
+colnames(allcarpc)[1] <- "pc1"
+
+colnames(alpost2_fil)[13] <- "ulev"
+
+allcarpc$Cars <- as.numeric(as.character(allcarpc$Cars))
+
+
+allpost3 <- alpost2_fil %>% left_join(allcarpc, by = "pc1") %>%
+                          mutate(carsperh = Cars/residential)
+
+
+
+allpost3_fil <- allpost3 %>% filter(carsperh < 3)
+
+
+r <-  ggmap(get_googlemap(center = c(lon = -2.25, lat = 55.4),
+                    zoom = 9, scale = 2,
+                    maptype ='terrain',
+                    color = 'color')) 
+
+
+
+r + geom_point(aes( x = lon, y = lat,col = carsperh), data = allpost3_fil, alpha = 0.5) +
+                                labs(title = "Cars Per House Northumberland") +
+                                guides(colour = guide_legend(title = "Cars Per House"), size = F) +
+                                    scale_colour_viridis()
+
+
+
+
+
+
+
+ggsave("plot3.png", last_plot())
+
+
+
+
+````
+
+
+
+```{r}
+
+
+
+
+allpost4 <- allpost3_fil %>% mutate(delta = carsperh - ulvph)
+
+
+
+w <-  ggmap(get_googlemap(center = c(lon = -2.25, lat = 55.4),
+                    zoom = 9, scale = 2,
+                    maptype ='terrain',
+                    color = 'color')) 
+
+
+
+w + geom_point(aes( x = lon, y = lat,col = delta), data = allpost4, alpha = 0.5) +
+                                labs(title = "Cars Per House Northumberland") +
+                                guides(colour = guide_legend(title = "Cars Per House"), size = F) +
+                                    scale_colour_viridis()
+
+
+
+
+
+
 
 
 ```
